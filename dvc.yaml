@@ -1,0 +1,16 @@
+stages:
+  preprocess:
+    cmd: python src/preprocessing/preprocess.py
+    deps:
+      - src/preprocessing/preprocess.py
+      - data/PetImages
+    outs:
+      - data/processed
+
+  train:
+    cmd: python src/models/train.py
+    deps:
+      - src/models/train.py
+      - data/processed
+    outs:
+      - models/cnn_baseline.h5
