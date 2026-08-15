@@ -1,11 +1,6 @@
-from src.preprocessing.preprocess import preprocess_image
-from PIL import Image
-import numpy as np
+from src.preprocessing.preprocess import preprocess
+import os
 
-def test_preprocess_shape(tmp_path):
-    img = Image.new("RGB", (300,300))
-    test_file = tmp_path / "test.jpg"
-    img.save(test_file)
-    arr = preprocess_image(str(test_file))
-    assert arr.shape == (224,224,3)
-    assert np.max(arr) <= 1.0
+def test_preprocess():
+    img = preprocess("data/PetImages/Cat/1.jpg")
+    assert img.shape == (3,224,224)

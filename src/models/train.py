@@ -1,31 +1,38 @@
-import numpy as np
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 import mlflow
-import mlflow.keras
-from sklearn.model_selection import train_test_split
-from cnn_baseline import build_model
-from preprocessing.preprocess import load_dataset, create_tf_dataset
+from cnn_baseline import CNNBaseline
 
-# Load data
-images, labels = load_dataset("data/PetImages")
-X_train, X_val, y_train, y_val = train_test_split(images, labels, test_size=0.2, random_state=42)
+def train_model():
+    mlflow.start_run()
+    transform = transforms.Compose([
+        transforms.Resize((224,224)),
+        transforms.ToTensor()
+    ])
+    train_loader = DataLoader(
+        datasets.ImageFolder("data/PetImages/train", transform=transform),
+        batch_size=32, shuffle=True
+    )
 
-train_ds = create_tf_dataset(X_train, y_train)
-val_ds = create_tf_dataset(X_val, y_val)
+    model = CNNBaseline()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# Build model
-model = build_model()
+    for epoch in range(5):
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+        mlflow.log_metric("loss", loss.item())
 
-# MLflow tracking
-mlflow.start_run()
-mlflow.log_param("epochs", 5)
-mlflow.log_param("batch_size", 32)
+    torch.save(model.state_dict(), "models/cnn_baseline.h5")
+    mlflow.log_artifact("models/cnn_baseline.h5")
+    mlflow.end_run()
 
-history = model.fit(train_ds, validation_data=val_ds, epochs=5)
-
-val_acc = history.history['val_accuracy'][-1]
-mlflow.log_metric("val_accuracy", val_acc)
-
-model.save("models/cnn_baseline.h5")
-mlflow.log_artifact("models/cnn_baseline.h5")
-
-mlflow.end_run()
+if __name__ == "__main__":
+    train_model()

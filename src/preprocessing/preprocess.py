@@ -1,29 +1,29 @@
+import torchvision.transforms as T
 from PIL import Image
-import numpy as np
 import os
-import tensorflow as tf
 
-def preprocess_image(path, size=(224,224)):
-    """Load and preprocess a single image file."""
-    img = Image.open(path).convert("RGB").resize(size)
-    arr = np.array(img) / 255.0
-    return arr
+# Define preprocessing + augmentation
+transform = T.Compose([
+    T.Resize((224,224)),
+    T.RandomHorizontalFlip(),
+    T.ToTensor(),
+])
 
-def load_dataset(base_dir, size=(224,224)):
-    """Load cats and dogs dataset from folder structure."""
-    images, labels = [], []
-    for label, folder in enumerate(["Cat", "Dog"]):
-        folder_path = os.path.join(base_dir, folder)
-        for file in os.listdir(folder_path):
+def preprocess(img_path: str):
+    """Load and preprocess a single image."""
+    img = Image.open(img_path).convert("RGB")
+    return transform(img)
+
+def preprocess_dataset(input_dir: str, output_dir: str):
+    """Preprocess all images in dataset and save tensors."""
+    os.makedirs(output_dir, exist_ok=True)
+    for cls in ["Cat", "Dog"]:
+        in_path = os.path.join(input_dir, cls)
+        out_path = os.path.join(output_dir, cls)
+        os.makedirs(out_path, exist_ok=True)
+        for file in os.listdir(in_path):
             try:
-                arr = preprocess_image(os.path.join(folder_path, file), size)
-                images.append(arr)
-                labels.append(label)
+                tensor = preprocess(os.path.join(in_path, file))
+                torch.save(tensor, os.path.join(out_path, f"{file}.pt"))
             except Exception:
                 continue
-    return np.array(images), np.array(labels)
-
-def create_tf_dataset(images, labels, batch_size=32):
-    dataset = tf.data.Dataset.from_tensor_slices((images, labels))
-    dataset = dataset.shuffle(buffer_size=1000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
-    return dataset

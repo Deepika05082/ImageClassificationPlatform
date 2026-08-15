@@ -1,14 +1,20 @@
 from fastapi import FastAPI, UploadFile
-import tensorflow as tf
+import torch
 from PIL import Image
-import numpy as np
-import time
-import logging
+import io
+from cnn_baseline import CNNBaseline
+import torchvision.transforms as T
 
-logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
-model = tf.keras.models.load_model("models/cnn_baseline.h5")
+model = CNNBaseline()
+model.load_state_dict(torch.load("models/cnn_baseline.h5"))
+model.eval()
+
+transform = T.Compose([
+    T.Resize((224,224)),
+    T.ToTensor()
+])
 
 @app.get("/health")
 def health():
@@ -16,10 +22,9 @@ def health():
 
 @app.post("/predict")
 async def predict(file: UploadFile):
-    start = time.time()
-    img = Image.open(file.file).convert("RGB").resize((224,224))
-    arr = np.expand_dims(np.array(img)/255.0, axis=0)
-    pred = model.predict(arr)[0][0]
-    latency = time.time() - start
-    logging.info(f"Prediction latency={latency:.3f}s")
-    return {"class": "dog" if pred>0.5 else "cat", "probability": float(pred)}
+    img = Image.open(io.BytesIO(await file.read())).convert("RGB")
+    tensor = transform(img).unsqueeze(0)
+    outputs = model(tensor)
+    _, pred = torch.max(outputs, 1)
+    label = "Cat" if pred.item() == 0 else "Dog"
+    return {"class": label, "probability": torch.softmax(outputs,1).max().item()}

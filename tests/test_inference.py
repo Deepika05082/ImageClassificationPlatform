@@ -1,5 +1,8 @@
-from src.inference.utils import label_map
+from src.inference.app import model, transform
+from PIL import Image
 
-def test_label_map():
-    assert label_map(0.7) == "dog"
-    assert label_map(0.3) == "cat"
+def test_inference():
+    img = Image.open("data/PetImages/Cat/1.jpg").convert("RGB")
+    tensor = transform(img).unsqueeze(0)
+    outputs = model(tensor)
+    assert outputs.shape[1] == 2

@@ -1,13 +1,19 @@
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+import torch.nn as nn
+import torch.nn.functional as F
 
-def build_model():
-    model = Sequential([
-        Conv2D(32, (3,3), activation='relu', input_shape=(224,224,3)),
-        MaxPooling2D(2,2),
-        Flatten(),
-        Dense(128, activation='relu'),
-        Dense(1, activation='sigmoid')
-    ])
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    return model
+class CNNBaseline(nn.Module):
+    def __init__(self):
+        super(CNNBaseline, self).__init__()
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
+        self.fc1 = nn.Linear(64*54*54, 128)
+        self.fc2 = nn.Linear(128, 2)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
