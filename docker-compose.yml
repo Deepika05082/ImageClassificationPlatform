@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  catsdogs:
+    build: .
+    container_name: catsdogs_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    restart: always
